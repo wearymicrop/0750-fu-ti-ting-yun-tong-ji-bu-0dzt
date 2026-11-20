@@ -3,18 +3,25 @@ import {request} from './api.mjs';
 import {drawOverview} from './reconcile.mjs';
 import {drawEvidence} from './evidence.mjs';
 import {drawStage} from './stages.mjs';
-import {drawArchive, drawArchived} from './archive.mjs';
+import {drawArchive, drawArchived, drawChain, setReviseEnabled} from './archive.mjs';
+import {
+  closeRevisionForm, drawRevision, drawRevisionForm, readRevisionForm, revisionFeedback, revisionState,
+} from './revision.mjs';
 
 const links = [...document.querySelectorAll('[data-section]')];
-const state = {sample: 'dirty', result: null, report: null, evidenceKey: 0};
+const state = {sample: 'dirty', result: null, report: null, revision: null, chain: null, evidenceKey: 0};
 const status = value => { $('status').textContent = value; };
+
+function evidenceSource() {
+  if (state.report && state.report.result === state.result) return `/api/runs/${state.report.id}`;
+  return `/api/preview/${state.sample}`;
+}
 
 async function inspect(segment) {
   const key = ++state.evidenceKey;
-  const source = state.report && state.report.result === state.result ? `/api/runs/${state.report.id}` : `/api/preview/${state.sample}`;
   const args = new URLSearchParams({device: segment.device, start: segment.start});
   try {
-    const data = await request(`${source}/evidence?${args}`);
+    const data = await request(`${evidenceSource()}/evidence?${args}`);
     if (key === state.evidenceKey) drawEvidence(data);
   } catch (error) {
     if (key === state.evidenceKey) $('evidence').textContent = error.message;
@@ -33,7 +40,9 @@ function syncView() {
   $('archive').hidden = section !== 'runs';
   $('stage').hidden = ['reconcile', 'runs'].includes(section);
   if (section === 'runs') {
-    drawArchived(state.report);
+    drawArchived(state.report, state.revision);
+    drawChain(state.report, state.chain, openReport);
+    setReviseEnabled(state.chain?.head_id, state.report?.id);
     drawArchive(openReport).catch(error => status(error.message));
   } else if (state.result) {
     if (section === 'reconcile') drawOverview(state.result, inspect);
@@ -54,11 +63,14 @@ async function loadSample() {
   const sample = $('sample').value;
   status('载入中');
   $('save').disabled = true;
+  closeRevision();
   try {
     const result = await request(`/api/preview/${sample}`);
     if (key !== loadKey) return;
     state.sample = sample;
     state.report = null;
+    state.revision = null;
+    state.chain = null;
     showResult(result);
     status('样例已计算');
   } catch (error) {
@@ -74,25 +86,79 @@ async function loadSample() {
 async function saveReport(body) {
   const report = await request('/api/runs', body);
   state.report = report;
+  state.revision = null;
+  state.chain = await request(`/api/runs/${report.id}/revisions`);
   showResult(report.result);
   status(report.reused ? '已复用同一班报' : '班报已保存');
 }
 
+function closeRevision() {
+  closeRevisionForm();
+  $('revision-review').hidden = true;
+}
+
 async function openReport(id) {
   try {
-    state.report = await request(`/api/runs/${id}`);
-    state.sample = state.report.manifest.source;
-    $('sample').value = state.sample;
+    const node = await request(`/api/runs/${id}`);
+    state.report = node;
+    state.revision = node.kind === 'revision' ? node : null;
+    if (node.kind === 'report') {
+      state.sample = node.manifest.source;
+      $('sample').value = state.sample;
+    }
     $('run-feedback').textContent = '';
-    showResult(state.report.result);
+    state.chain = await request(`/api/runs/${id}/revisions`);
+    showResult(node.result);
+    if (state.revision) drawRevision(node);
+    else closeRevision();
     status('已读取归档');
   } catch (error) { status(error.message); }
+}
+
+async function submitRevision(persist) {
+  if (!state.report) return;
+  const body = readRevisionForm();
+  if (!body.corrections && !body.permits) {
+    revisionFeedback('修订须至少包含一条更正或一份审批', 'warn');
+    return;
+  }
+  $('revision-save').disabled = true;
+  $('revision-check').disabled = true;
+  revisionState(persist ? '提交中' : '试算中');
+  try {
+    const query = persist ? '' : '?dry_run=true';
+    const node = await request(`/api/runs/${state.report.id}/revisions${query}`, body);
+    if (node.already_applied) {
+      revisionFeedback('这些更正已包含在结论中，未重复叠加时长', 'warn');
+      revisionState('已存在');
+    } else {
+      revisionFeedback(persist ? (node.reused ? '已复用同一修订' : '修订已保存为正式结论') : '试算对平，可保存为正式结论', '');
+      revisionState(persist ? '已保存' : '试算');
+    }
+    drawRevision(node, {preview: !persist});
+    if (persist) {
+      await openReport(node.id);
+      window.location.hash = 'runs';
+    }
+  } catch (error) {
+    const detail = error.details?.problems
+      ? `：${error.details.problems.map(item => item.why).join('、')}` : '';
+    revisionFeedback(`${error.message}${detail}`, 'warn');
+    revisionState('未通过');
+  } finally {
+    $('revision-save').disabled = false;
+    $('revision-check').disabled = false;
+  }
 }
 
 $('sample').addEventListener('change', loadSample);
 window.addEventListener('hashchange', syncView);
 $('save').addEventListener('click', async () => {
-  if (state.sample === 'custom' && state.report) {
+  if (state.report) {
+    window.location.hash = 'runs';
+    return;
+  }
+  if (state.sample === 'custom') {
     window.location.hash = 'runs';
     return;
   }
@@ -132,6 +198,15 @@ $('upload').addEventListener('change', async () => {
     $('save').disabled = !state.result;
     $('upload-button').disabled = false;
   }
+});
+$('revise').addEventListener('click', () => {
+  if (!state.report) return;
+  if (state.chain?.head_id && state.chain.head_id !== state.report.id) {
+    status('该班报已有更新的正式结论，请先打开最新结论');
+    return;
+  }
+  drawRevisionForm(state.report, submitRevision);
+  revisionFeedback('填写后先试算核对，再保存为正式结论');
 });
 $('rerun').addEventListener('click', async () => {
   if (!state.report) return;

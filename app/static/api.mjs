@@ -4,6 +4,11 @@ export async function request(path, body) {
   };
   const response = await fetch(path, options);
   const data = await response.json();
-  if (!response.ok) throw new Error(data.message ?? '请求失败，请重试');
+  if (!response.ok) {
+    const error = new Error(data.message ?? '请求失败，请重试');
+    error.code = data.code;
+    error.details = data.details;
+    throw error;
+  }
   return data;
 }

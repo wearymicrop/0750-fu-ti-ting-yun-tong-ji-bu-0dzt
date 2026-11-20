@@ -15,6 +15,7 @@
 | M5 豁免计入 | 核对确实适用的审批及覆盖秒数 | `GET /api/exemptions/{sample}` | `app/modules/exemptions/register.py` `app/modules/exemptions/apply.py` | `tests/test_exemptions.py` |
 | M6 可用率核对 | 逐台核对四类秒数、差额和可用率 | `GET /api/reconcile/{sample}` | `app/modules/reconcile/balance.py` | `tests/test_reconcile.py` |
 | M7 班报归档 | 保存班报、查询证据、重跑和下载 | `POST /api/runs` | `app/modules/reports/store.py` `app/modules/reports/manifest.py` `app/modules/reports/evidence.py` | `tests/test_reports.py` |
+| M8 班报修订 | 交班后补录更正与审批、试算、保存正式修订 | `POST /api/runs/{id}/revisions` | `app/modules/revisions/ledger.py` `app/modules/revisions/workflow.py` | `tests/test_revisions.py` |
 
 ## 陷阱登记
 
@@ -29,6 +30,9 @@
 | TRAP-21 | `dirty/shifts.json` 第 5 行引用未登记设备 | 凭空增加营业窗口 | 隔离缺设备引用的班次 | `app/modules/schedules/calendar.py` | `tests/test_schedules.py::test_unknown_device_shift` |
 | TRAP-23 | `clean/shifts.json` 第 1 行结束时刻跨入次日 | 午夜后营业漏计 | 按次日端点展开，右端排除 | `app/modules/schedules/calendar.py` | `tests/test_schedules.py::test_midnight_shift` |
 | TRAP-25 | `dirty/shifts.json` 第 1、3 行交叠半小时 | 双计营业秒 | 保留原班次并计算并集 | `app/modules/schedules/calendar.py` | `tests/test_schedules.py::test_overlapping_shifts_are_unioned` |
+| TRAP-29 | 交班后才补到报码更正与施工审批 | 直接改原报或另起一份全新班报 | 原报只读，修订独立编号并指向父级，修订链可回查 | `app/modules/revisions/workflow.py` `app/modules/revisions/ledger.py` | `tests/test_revisions.py::test_original_report_stays_unchanged_after_revision` |
+| TRAP-31 | 同一更正重复送入或修订中断后重试 | 追加事件行，重复时长翻倍 | 按设备和报码就地替换，修订编号取规范化内容 | `app/modules/revisions/ledger.py` | `tests/test_revisions.py::test_retry_after_interruption_does_not_stack_seconds` |
+| TRAP-33 | 未对平或父级已过期的修订 | 直接落库成为新结论 | 对平校验不通过即拒绝，父级须为当前正式结论 | `app/modules/revisions/workflow.py` | `tests/test_revisions.py::test_unbalanced_revision_never_becomes_formal` `tests/test_revisions.py::test_revision_on_stale_parent_is_rejected` |
 
 ## 联合回归
 
@@ -36,3 +40,6 @@
 - 已隔离、已采信和重传行数对平输入。见 `tests/test_events.py::test_event_counts_conserve`。
 - 每台设备的四类秒数对平营业并集，片段连续。见 `tests/test_reconcile.py::test_per_device_conservation_and_contiguity`。
 - 并发保存只写一份 SQLite 记录。见 `tests/test_reports.py::test_duplicate_posts_commit_once`。
+- 修订前后四类秒数增减相抵、营业秒不变。见 `tests/test_revisions.py::test_adopting_a_corrected_code_replaces_the_line_without_adding_seconds`。
+- 同一修订并发或重试只落一份正式结论。见 `tests/test_revisions.py::test_running_two_requests_concurrently_creates_one_formal_revision` `tests/test_revisions.py::test_retry_after_interruption_does_not_stack_seconds`。
+- 页面读取与下载内容一致，导出前复核摘要。见 `tests/test_revisions.py::test_export_matches_the_page_and_adopted_inputs`。

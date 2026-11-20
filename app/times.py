@@ -1,5 +1,5 @@
 import re
-from datetime import datetime
+from datetime import datetime, timezone
 
 from app.config import LOCAL
 
@@ -17,3 +17,7 @@ def instant(value):
 
 def local_time(value):
     return datetime.fromtimestamp(value, LOCAL).isoformat(timespec='seconds')
+
+
+def utc_time(value):
+    return datetime.fromtimestamp(value, timezone.utc).isoformat(timespec='seconds').replace('+00:00', 'Z')

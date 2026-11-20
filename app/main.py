@@ -11,12 +11,13 @@ from app.modules.events.routes import router as events
 from app.modules.exemptions.routes import router as exemptions
 from app.modules.reconcile.routes import router as reconcile
 from app.modules.reports.routes import router as reports
+from app.modules.revisions.routes import router as revisions
 from app.modules.schedules.routes import router as schedules
 from app.web import router as web
 
 app = FastAPI(title='扶梯停运统计簿')
 app.mount('/static', StaticFiles(directory=ROOT / 'app' / 'static'), name='static')
-for router in (schedules, events, clipping, attribution, exemptions, reconcile, reports, web):
+for router in (schedules, events, clipping, attribution, exemptions, reconcile, reports, revisions, web):
     app.include_router(router)
 
 
@@ -27,7 +28,10 @@ def health():
 
 @app.exception_handler(BusinessError)
 def business_error(_: Request, error: BusinessError):
-    return JSONResponse({'code': error.code, 'message': str(error)}, status_code=error.status)
+    body = {'code': error.code, 'message': str(error)}
+    if error.details is not None:
+        body['details'] = error.details
+    return JSONResponse(body, status_code=error.status)
 
 
 @app.exception_handler(RequestValidationError)

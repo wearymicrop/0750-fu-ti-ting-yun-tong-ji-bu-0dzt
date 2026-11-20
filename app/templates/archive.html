@@ -8,7 +8,10 @@
       <div class="panel-heading"><h2>归档操作</h2></div>
       <div class="archive-detail">
         <dl id="archive-detail"></dl>
+        <h3 class="subsection">修订链</h3>
+        <ol id="revision-chain" class="chain-list"></ol>
         <div class="tools" id="archive-actions" hidden>
+          <button type="button" id="revise">修订本班报</button>
           <button type="button" id="rerun">重跑归档</button>
           <a class="button" id="download" download>下载证据</a>
         </div>
@@ -16,4 +19,57 @@
       </div>
     </section>
   </div>
+
+  <section class="panel comparison" id="revision-form-panel" hidden aria-labelledby="revision-form-title">
+    <div class="panel-heading">
+      <div>
+        <p class="eyebrow" id="revision-parent-label">原班报</p>
+        <h2 id="revision-form-title">补录更正与施工审批</h2>
+      </div>
+      <span class="tag" id="revision-state">未提交</span>
+    </div>
+    <div class="revision-form" id="revision-form">
+      <div class="form-column">
+        <div class="form-heading">
+          <h3>报码更正</h3>
+          <button type="button" id="add-correction">加一条更正</button>
+        </div>
+        <p class="hint">按设备和报码就地替换原行；同一报码重复送入不会叠加时长。</p>
+        <div id="correction-rows"></div>
+      </div>
+      <div class="form-column">
+        <div class="form-heading">
+          <h3>施工审批</h3>
+          <button type="button" id="add-permit">加一份审批</button>
+        </div>
+        <p class="hint">仅已批准且带凭据的审批生效；与原班报重复的审批不会重复计入。</p>
+        <div id="permit-rows"></div>
+      </div>
+      <label class="note-field">修订说明 <input type="text" id="revision-note" maxlength="500" placeholder="例如：交班后补到 E-201 更正与夜修审批单"></label>
+      <div class="tools">
+        <button type="button" id="revision-check">试算核对</button>
+        <button type="button" class="primary" id="revision-save">保存修订</button>
+      </div>
+      <p id="revision-feedback" role="status"></p>
+    </div>
+  </section>
+
+  <section class="workspace" id="revision-review" hidden aria-label="修订核对">
+    <section class="panel">
+      <div class="panel-heading"><div><p class="eyebrow">采用输入</p><h2>采用的报码</h2></div></div>
+      <div id="adopted-codes" class="table-scroll"></div>
+    </section>
+    <section class="panel">
+      <div class="panel-heading"><div><p class="eyebrow">采用输入</p><h2>采用的审批</h2></div></div>
+      <div id="adopted-permits" class="table-scroll"></div>
+    </section>
+    <section class="panel comparison">
+      <div class="panel-heading"><div><p class="eyebrow">设备对账</p><h2>修订前后</h2></div><span class="tag" id="revision-balance"></span></div>
+      <div id="revision-devices" class="table-scroll"></div>
+    </section>
+    <section class="panel comparison">
+      <div class="panel-heading"><div><p class="eyebrow">新旧差异</p><h2>片段与合计</h2></div></div>
+      <div id="revision-diff" class="table-scroll"></div>
+    </section>
+  </section>
 </div>

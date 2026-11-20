@@ -9,3 +9,27 @@ dl { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 7px 12px; }
 dt { color: var(--muted); }
 dd { margin: 0; overflow-wrap: anywhere; }
 #run-feedback { color: var(--accent); margin-top: 9px; }
+
+.subsection { margin: 14px 0 6px; color: var(--muted); font-size: 12px; }
+.chain-list { margin: 0 0 12px; padding: 0; list-style: none; display: grid; gap: 5px; }
+.chain-list li { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 4px 0 4px 9px; border-left: 2px solid var(--line); }
+.chain-list li.current { border-color: var(--accent); }
+.chain-list .link { background: none; border: 0; padding: 0; color: var(--accent); }
+.chain-list .link:hover { text-decoration: underline; }
+.chain-list .empty { border: 0; padding: 0; color: var(--quiet); }
+.revision-form { padding: 0 var(--pad) var(--pad); display: grid; gap: 14px; }
+.form-column { display: grid; gap: 8px; }
+.form-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.form-heading h3 { font-size: 13px; }
+.hint { color: var(--quiet); font-size: 12px; }
+.revision-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(128px, 1fr)); gap: 6px; align-items: center; padding: 8px 0; border-top: 1px solid var(--line); }
+.revision-row input, .revision-row select { width: 100%; font: inherit; color: var(--ink); background: var(--panel-alt); border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; }
+.revision-row .row-remove { padding: 6px 9px; color: var(--muted); }
+.note-field { display: grid; gap: 5px; color: var(--muted); font-size: 12px; }
+.note-field input { font: inherit; color: var(--ink); background: var(--panel-alt); border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; }
+#revision-feedback { color: var(--accent); }
+#revision-feedback[data-tone=warn], .balance-warning { color: var(--missing); }
+.diff-summary { display: flex; flex-wrap: wrap; gap: 6px 14px; padding: 0 var(--pad) 9px; color: var(--muted); font-size: 12px; font-family: var(--mono); }
+.table-scroll.inner { max-height: 300px; }
+.balance-problems { margin: 6px var(--pad) 0; padding-left: 18px; color: var(--missing); font-size: 12px; }
+.revision-meta { padding: 10px var(--pad) var(--pad); color: var(--quiet); font-size: 11px; font-family: var(--mono); overflow-wrap: anywhere; }
